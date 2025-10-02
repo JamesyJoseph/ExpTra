@@ -10,14 +10,46 @@ let userTransactions = [];
 
 async function loadFirebaseConfig() {
     try {
-        const response = await fetch('../config/firebase-config.txt');
-        const configText = await response.text();
+        // Try different possible paths
+        const possiblePaths = [
+            '../config/firebase-config.txt',
+            './config/firebase-config.txt',
+            'config/firebase-config.txt',
+            '/config/firebase-config.txt'
+        ];
+        
+        let configText = '';
+        let successfulPath = '';
+        
+        // Try each path until one works
+        for (const path of possiblePaths) {
+            try {
+                const response = await fetch(path);
+                if (response.ok) {
+                    configText = await response.text();
+                    successfulPath = path;
+                    console.log('Found config file at:', path);
+                    break;
+                }
+            } catch (error) {
+                console.log('Failed to load from:', path);
+                continue;
+            }
+        }
+        
+        if (!configText) {
+            throw new Error('Could not find firebase-config.txt in any of the expected locations');
+        }
         
         // Parse the text file into a config object
         const config = {};
         const lines = configText.split('\n');
         
         lines.forEach(line => {
+            // Skip empty lines and comments
+            if (line.trim() === '' || line.trim().startsWith('#')) {
+                return;
+            }
             const [key, value] = line.split('=');
             if (key && value) {
                 config[key.trim()] = value.trim();
@@ -32,10 +64,12 @@ async function loadFirebaseConfig() {
             throw new Error(`Missing Firebase configuration: ${missingKeys.join(', ')}`);
         }
         
+        console.log('Firebase config loaded successfully:', config);
         return config;
+        
     } catch (error) {
         console.error('Error loading Firebase config:', error);
-        throw new Error('Failed to load Firebase configuration. Please check if config/firebase-config.txt exists.');
+        throw new Error('Failed to load Firebase configuration: ' + error.message);
     }
 }
 

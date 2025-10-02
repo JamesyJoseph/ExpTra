@@ -1,0 +1,6 @@
+apiKey=AIzaSyDDog0wPrHI-S0xGqHwjs_dgAPv-Oq_M0k
+authDomain=exptra-13b3b.firebaseapp.com
+projectId=exptra-13b3b
+storageBucket=exptra-13b3b.firebasestorage.app
+messagingSenderId=647780793617
+appId=1:647780793617:web:3b3ded6e9dc53594eca0b0
