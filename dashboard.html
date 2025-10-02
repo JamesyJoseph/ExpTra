@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExpTra - Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+     <!-- PDF Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">ExpTra</div>
+            <div class="auth-section">
+                <div class="theme-toggle-container">
+                    <span class="theme-label">Theme</span>
+                    <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode"></button>
+                </div>
+                <div class="user-info" id="userInfo">
+                    <span class="username" id="usernameDisplay">User</span>
+                    <button class="logout-btn" id="logoutBtn">Logout</button>
+                </div>
+            </div>
+        </header>
+        
+        <main id="mainContent">
+            <div class="card balance-section">
+                <div class="balance-label">Current Balance</div>
+                <div class="balance-amount" id="balanceAmount">$0.00</div>
+                <div id="balanceMessage"></div>
+                <div class="action-buttons">
+                    <button class="action-btn expense-btn" id="expenseBtn">-</button>
+                    <button class="action-btn income-btn" id="incomeBtn">+</button>
+                </div>
+            </div>
+            
+            <div class="card transaction-section">
+                <div class="transaction-header">
+                    <h2>Recent Transactions</h2>
+                    <button class="btn-primary pdf-btn" id="pdfBtn">
+                        📄 Generate PDF
+                    </button>
+                </div>
+                <div class="filter-section">
+                    <button class="filter-btn btn-outline active" data-filter="all">All</button>
+                    <button class="filter-btn btn-outline" data-filter="today">Today</button>
+                    <button class="filter-btn btn-outline" data-filter="month">This Month</button>
+                </div>
+                <div class="transaction-list" id="transactionList">
+                    <div class="loading">Loading transactions...</div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer Section -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p>&copy; ExpTra developed by JamesyJoseph @2025. All rights reserved.</p>
+            </div>
+        </footer>
+
+    </div>
+    
+    <!-- Income Modal -->
+    <div class="modal" id="incomeModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add Income</h3>
+                <button class="close-btn" id="closeIncomeModal">&times;</button>
+            </div>
+            <form id="incomeForm">
+                <div class="form-group">
+                    <label for="incomeAmount">Amount</label>
+                    <input type="number" id="incomeAmount" step="0.01" min="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="incomeNote">Note (Optional)</label>
+                    <textarea id="incomeNote" placeholder="Add a note..."></textarea>
+                </div>
+                <button type="submit" class="btn-success submit-btn">Add Income</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Expense Modal -->
+    <div class="modal" id="expenseModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add Expense</h3>
+                <button class="close-btn" id="closeExpenseModal">&times;</button>
+            </div>
+            <form id="expenseForm">
+                <div class="form-group">
+                    <label for="expenseAmount">Amount</label>
+                    <input type="number" id="expenseAmount" step="0.01" min="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="expenseNote">Note (Optional)</label>
+                    <textarea id="expenseNote" placeholder="Add a note..."></textarea>
+                </div>
+                <button type="submit" class="btn-danger submit-btn">Add Expense</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/theme.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/transactions.js"></script>
+</body>
+</html>

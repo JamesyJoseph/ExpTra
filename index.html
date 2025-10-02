@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker - Welcome</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">ExpTra</div>
+            <div class="auth-section">
+                <div class="theme-toggle-container">
+                    <span class="theme-label">Theme</span>
+                    <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode"></button>
+                </div>
+                <a href="login.html" class="btn-outline">Login</a>
+                <a href="login.html?action=signup" class="btn-primary">Sign Up</a>
+            </div>
+        </header>
+        
+        <main class="hero-section">
+            <div class="card">
+                <h1>Take Control of Your Finances</h1>
+                <p>Track your income and expenses with our easy-to-use expense tracker.</p>
+                <div class="features">
+                    <div class="feature">
+                        <h3>💰 Easy Tracking</h3>
+                        <p>Quickly add income and expenses with one click</p>
+                    </div>
+                    <div class="feature">
+                        <h3>📊 Smart Analytics</h3>
+                        <p>View your spending patterns with smart filters</p>
+                    </div>
+                    <div class="feature">
+                        <h3>🔒 Secure Storage</h3>
+                        <p>Your data is safely stored in the cloud</p>
+                    </div>
+                    <div class="feature">
+                        <h3>📄 PDF Reports</h3>
+                        <p>Generate professional PDF reports of your transactions</p>
+                    </div>
+                </div>
+                <a href="login.html" class="btn-primary get-started-btn">Get Started</a>
+            </div>
+        </main>
+
+        <!-- Footer Section -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p>&copy; ExpTra developed by JamesyJoseph @2025. All rights reserved.</p>
+            </div>
+        </footer>
+
+    </div>
+
+    <script src="js/theme.js"></script>
+    <script src="js/firebase-config.js"></script>
+</body>
+</html>
