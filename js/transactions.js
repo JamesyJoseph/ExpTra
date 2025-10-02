@@ -1,57 +1,98 @@
+// js/transactions.js
+
 // DOM Elements
-const incomeBtn = document.getElementById('incomeBtn');
-const expenseBtn = document.getElementById('expenseBtn');
-const incomeModal = document.getElementById('incomeModal');
-const expenseModal = document.getElementById('expenseModal');
-const incomeForm = document.getElementById('incomeForm');
-const expenseForm = document.getElementById('expenseForm');
-const closeIncomeModal = document.getElementById('closeIncomeModal');
-const closeExpenseModal = document.getElementById('closeExpenseModal');
-const balanceAmount = document.getElementById('balanceAmount');
-const transactionList = document.getElementById('transactionList');
-const filterBtns = document.querySelectorAll('.filter-btn');
+let incomeBtn, expenseBtn, incomeModal, expenseModal, incomeForm, expenseForm;
+let closeIncomeModal, closeExpenseModal, balanceAmount, transactionList, filterBtns, pdfBtn;
 
-const pdfBtn = document.getElementById('pdfBtn');
-
-// Event Listeners
-if (incomeBtn) incomeBtn.addEventListener('click', () => incomeModal.style.display = 'flex');
-if (expenseBtn) expenseBtn.addEventListener('click', () => expenseModal.style.display = 'flex');
-if (closeIncomeModal) closeIncomeModal.addEventListener('click', () => incomeModal.style.display = 'none');
-if (closeExpenseModal) closeExpenseModal.addEventListener('click', () => expenseModal.style.display = 'none');
-if (incomeForm) incomeForm.addEventListener('submit', handleIncome);
-if (expenseForm) expenseForm.addEventListener('submit', handleExpense);
-
-if (pdfBtn) {
-    pdfBtn.addEventListener('click', generatePDF);
+// Initialize transactions when Firebase is ready
+async function initializeTransactions() {
+    try {
+        await waitForFirebase();
+        console.log('Firebase ready for transactions');
+        
+        // Initialize DOM elements after Firebase is ready
+        initializeDOMElements();
+        
+        // Set up event listeners
+        setupEventListeners();
+        
+        // Load transactions if user is authenticated
+        if (currentUser) {
+            loadTransactions();
+        }
+        
+    } catch (error) {
+        console.error('Failed to initialize transactions:', error);
+    }
 }
 
-// Close modals when clicking outside
-window.addEventListener('click', (e) => {
-    if (e.target === incomeModal) incomeModal.style.display = 'none';
-    if (e.target === expenseModal) expenseModal.style.display = 'none';
-});
+function initializeDOMElements() {
+    incomeBtn = document.getElementById('incomeBtn');
+    expenseBtn = document.getElementById('expenseBtn');
+    incomeModal = document.getElementById('incomeModal');
+    expenseModal = document.getElementById('expenseModal');
+    incomeForm = document.getElementById('incomeForm');
+    expenseForm = document.getElementById('expenseForm');
+    closeIncomeModal = document.getElementById('closeIncomeModal');
+    closeExpenseModal = document.getElementById('closeExpenseModal');
+    balanceAmount = document.getElementById('balanceAmount');
+    transactionList = document.getElementById('transactionList');
+    filterBtns = document.querySelectorAll('.filter-btn');
+    pdfBtn = document.getElementById('pdfBtn');
+}
 
-// Filter buttons
-if (filterBtns) {
-    filterBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            filterBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            renderTransactions(btn.dataset.filter);
-        });
+function setupEventListeners() {
+    // Event Listeners
+    if (incomeBtn) incomeBtn.addEventListener('click', () => incomeModal.style.display = 'flex');
+    if (expenseBtn) expenseBtn.addEventListener('click', () => expenseModal.style.display = 'flex');
+    if (closeIncomeModal) closeIncomeModal.addEventListener('click', () => incomeModal.style.display = 'none');
+    if (closeExpenseModal) closeExpenseModal.addEventListener('click', () => expenseModal.style.display = 'none');
+    if (incomeForm) incomeForm.addEventListener('submit', handleIncome);
+    if (expenseForm) expenseForm.addEventListener('submit', handleExpense);
+
+    if (pdfBtn) {
+        pdfBtn.addEventListener('click', generatePDF);
+    }
+
+    // Close modals when clicking outside
+    window.addEventListener('click', (e) => {
+        if (e.target === incomeModal) incomeModal.style.display = 'none';
+        if (e.target === expenseModal) expenseModal.style.display = 'none';
     });
+
+    // Filter buttons
+    if (filterBtns) {
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                renderTransactions(btn.dataset.filter);
+            });
+        });
+    }
 }
 
-// Load transactions when user is authenticated
-auth.onAuthStateChanged((user) => {
+// Use the auth state observer from auth.js instead of duplicating it
+// This will be called by auth.js when the user state changes
+function onUserAuthenticated(user) {
     if (user) {
         loadTransactions();
+    } else {
+        userTransactions = [];
+        updateBalance();
+        renderTransactions('all');
     }
-});
+}
 
 // Functions
 async function handleIncome(e) {
     e.preventDefault();
+    
+    if (typeof db === 'undefined' || db === null) {
+        showMessage('Database not available. Please try again.', 'error');
+        return;
+    }
+    
     const amount = parseFloat(document.getElementById('incomeAmount').value);
     const note = document.getElementById('incomeNote').value || 'Income';
     
@@ -76,12 +117,19 @@ async function handleIncome(e) {
         incomeForm.reset();
         showMessage('Income added successfully!', 'success');
     } catch (error) {
-        alert('Error adding income: ' + error.message);
+        console.error('Error adding income:', error);
+        showMessage('Error adding income: ' + error.message, 'error');
     }
 }
 
 async function handleExpense(e) {
     e.preventDefault();
+    
+    if (typeof db === 'undefined' || db === null) {
+        showMessage('Database not available. Please try again.', 'error');
+        return;
+    }
+    
     const amount = parseFloat(document.getElementById('expenseAmount').value);
     const note = document.getElementById('expenseNote').value || 'Expense';
     
@@ -115,7 +163,8 @@ async function handleExpense(e) {
         expenseForm.reset();
         showMessage('Expense added successfully!', 'success');
     } catch (error) {
-        alert('Error adding expense: ' + error.message);
+        console.error('Error adding expense:', error);
+        showMessage('Error adding expense: ' + error.message, 'error');
     }
 }
 
@@ -132,7 +181,7 @@ function calculateCurrentBalance() {
 }
 
 function loadTransactions() {
-    if (!currentUser) return;
+    if (!currentUser || typeof db === 'undefined' || db === null) return;
     
     // Load transactions with real-time updates
     db.collection('users').doc(currentUser.uid)
@@ -150,6 +199,7 @@ function loadTransactions() {
             renderTransactions('all');
         }, (error) => {
             console.error('Error loading transactions: ', error);
+            showMessage('Error loading transactions', 'error');
         });
 }
 
@@ -202,7 +252,7 @@ function renderTransactions(filter) {
     }
     
     if (filteredTransactions.length === 0) {
-        if (transactionList) transactionList.innerHTML = '<div class="transaction-item">No transactions found</div>';
+        if (transactionList) transactionList.innerHTML = '<div class="transaction-item">No transactions found for selected filter</div>';
         return;
     }
     
@@ -251,8 +301,10 @@ function showMessage(message, type) {
     
     if (type === 'success') {
         messageDiv.style.backgroundColor = 'var(--success)';
-    } else {
+    } else if (type === 'error') {
         messageDiv.style.backgroundColor = 'var(--danger)';
+    } else {
+        messageDiv.style.backgroundColor = 'var(--warning)';
     }
     
     document.body.appendChild(messageDiv);
@@ -265,8 +317,7 @@ function showMessage(message, type) {
     }, 3000);
 }
 
-
-// Simple PDF generation (replace the complex version above if you want simplicity)
+// Simple PDF generation
 function generatePDF() {
     if (!currentUser || userTransactions.length === 0) {
         showMessage('No transactions to export!', 'error');
@@ -338,6 +389,26 @@ function generatePDF() {
         
     } catch (error) {
         console.error('PDF generation error:', error);
-        showMessage('Error generating PDF', 'error');
+        showMessage('Error generating PDF: ' + error.message, 'error');
     }
 }
+
+// Wait for Firebase function (same as in auth.js)
+function waitForFirebase() {
+    return new Promise((resolve, reject) => {
+        const checkFirebase = () => {
+            if (typeof auth !== 'undefined' && auth !== null && typeof db !== 'undefined' && db !== null) {
+                resolve();
+            } else {
+                setTimeout(checkFirebase, 100);
+            }
+        };
+        checkFirebase();
+        
+        // Timeout after 10 seconds
+        setTimeout(() => reject(new Error('Firebase initialization timeout')), 10000);
+    });
+}
+
+// Initialize transactions when DOM is loaded
+document.addEventListener('DOMContentLoaded', initializeTransactions);

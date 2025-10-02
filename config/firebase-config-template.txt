@@ -1,0 +1,9 @@
+# Firebase Configuration
+# Copy this file to firebase-config.txt and replace with your actual Firebase project values
+
+apiKey=your_actual_api_key_here
+authDomain=your-project-id.firebaseapp.com
+projectId=your-project-id
+storageBucket=your-project-id.appspot.com
+messagingSenderId=123456789012
+appId=1:123456789012:web:abc123def456ghi789jkl0
