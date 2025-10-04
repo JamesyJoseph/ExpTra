@@ -211,19 +211,50 @@ async function handleSignup(e) {
     }
 }
 
-function handleLogout() {
-    if (typeof auth !== 'undefined' && auth !== null) {
-        auth.signOut()
-            .then(() => {
-                console.log('User signed out successfully');
-            })
-            .catch((error) => {
-                console.error('Sign out error:', error);
-                showMessage('Logout error: ' + error.message, 'error');
-            });
-    } else {
-        console.error('Firebase auth is not available for logout');
-        showMessage('Authentication service unavailable', 'error');
+async function handleLogout() {
+    console.log('Logout initiated...');
+    
+    if (!auth) {
+        console.error('Auth not available for logout');
+        showMessage('Authentication service unavailable. Please refresh the page.', 'error');
+        return;
+    }
+    
+    try {
+        // Show loading state
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.textContent = 'Logging out...';
+            logoutBtn.disabled = true;
+        }
+        
+        console.log('Calling auth.signOut()...');
+        await auth.signOut();
+        console.log('Sign out successful');
+        
+        // Clear any local data
+        currentUser = null;
+        
+        // The auth state observer will handle the redirect
+        showMessage('Logged out successfully', 'success');
+        
+    } catch (error) {
+        console.error('Sign out error:', error);
+        showMessage('Logout error: ' + error.message, 'error');
+        
+        // Reset button state
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.textContent = 'Logout';
+            logoutBtn.disabled = false;
+        }
+        
+        // Force redirect if auth fails completely
+        if (error.code === 'auth/network-request-failed') {
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 1000);
+        }
     }
 }
 
@@ -290,19 +321,23 @@ function hideMessage() {
     const tempAuthMessage = document.getElementById('tempAuthMessage');
     
     if (authMessage) {
-        authMessage.classList.add('hidden');
+        authMessage.style.display = 'none';
     }
-    if (tempAuthMessage && tempAuthMessage.parentNode) {
-        tempAuthMessage.parentNode.removeChild(tempAuthMessage);
+    if (tempAuthMessage) {
+        tempAuthMessage.style.opacity = '0';
+        setTimeout(() => {
+            if (tempAuthMessage.parentNode) {
+                tempAuthMessage.parentNode.removeChild(tempAuthMessage);
+            }
+        }, 300);
     }
 }
-
 function updateUI() {
     const userInfo = document.getElementById('userInfo');
     const usernameDisplay = document.getElementById('usernameDisplay');
-    const mainContent = document.getElementById('mainContent');
+    const logoutBtn = document.getElementById('logoutBtn');
     
-    if (currentUser && userInfo && usernameDisplay && typeof db !== 'undefined' && db !== null) {
+    if (currentUser && userInfo && usernameDisplay && db) {
         // Load user profile data
         db.collection('users').doc(currentUser.uid).get()
             .then(doc => {
@@ -313,13 +348,23 @@ function updateUI() {
             })
             .catch(error => {
                 console.error('Error loading user data:', error);
+                usernameDisplay.textContent = currentUser.email;
             });
             
         userInfo.style.display = 'flex';
+        
+        // Reset logout button state
+        if (logoutBtn) {
+            logoutBtn.textContent = 'Logout';
+            logoutBtn.disabled = false;
+        }
     } else if (userInfo) {
         userInfo.style.display = 'none';
     }
 }
 
 // Start the application when DOM is loaded
-document.addEventListener('DOMContentLoaded', initializeApp);
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, starting app initialization...');
+    initializeApp();
+});
