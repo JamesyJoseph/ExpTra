@@ -2,6 +2,10 @@
 
 A Firebase-powered expense tracking application with user authentication and real-time data synchronization.
 
+
+<img width="1107" height="895" alt="Screenshot 2025-10-05 023110" src="https://github.com/user-attachments/assets/efa8c483-d1aa-4bc0-99c4-9543c08d923d" />
+
+
 ## Setup Instructions
 
 1. **Create a Firebase Project**:
