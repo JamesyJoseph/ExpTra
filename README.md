@@ -1,4 +1,4 @@
-# <a href"https://exptra.vercel.app">ExpTra - (Expense Tracker)</a>
+# ExpTra - (Expense Tracker)
 
 A Firebase-powered expense tracking application with user authentication and real-time data synchronization.
 
