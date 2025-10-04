@@ -176,7 +176,7 @@ function showFirebaseError(message) {
         if (errorDiv.parentNode) {
             errorDiv.parentNode.removeChild(errorDiv);
         }
-    }, 10000);
+    }, 2000);
 }
 
 // Initialize Firebase when the script loads
