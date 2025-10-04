@@ -147,11 +147,23 @@ async function initializeFirebase() {
     }
 }
 
-function showFirebaseError(message) {
+function showFirebaseError(message, isCritical = false) {
     console.error('Firebase Error:', message);
+    
+    // Only show user-facing error for critical issues
+    if (!isCritical) {
+        console.log('Non-critical Firebase error, not showing user message');
+        return;
+    }
+    
+    // Don't show multiple error messages
+    if (document.querySelector('.firebase-error-message')) {
+        return;
+    }
     
     // Create error message for user
     const errorDiv = document.createElement('div');
+    errorDiv.className = 'firebase-error-message';
     errorDiv.style.cssText = `
         position: fixed;
         top: 0;
@@ -164,10 +176,19 @@ function showFirebaseError(message) {
         z-index: 10000;
         font-weight: bold;
         font-family: Arial, sans-serif;
+        border-bottom: 2px solid #c1121f;
     `;
     errorDiv.innerHTML = `
-        <strong>Firebase Error:</strong> ${message}
-        <br><small>Please check your console for details and refresh the page.</small>
+        <strong>Connection Error:</strong> ${message}
+        <button onclick="this.parentNode.remove()" style="
+            background: none;
+            border: 1px solid white;
+            color: white;
+            margin-left: 15px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        ">×</button>
     `;
     document.body.appendChild(errorDiv);
     
@@ -176,7 +197,7 @@ function showFirebaseError(message) {
         if (errorDiv.parentNode) {
             errorDiv.parentNode.removeChild(errorDiv);
         }
-    }, 2000);
+    }, 10000);
 }
 
 // Initialize Firebase when the script loads
