@@ -1,28 +1,34 @@
 // js/auth.js
 
-// Global variables
-let currentUser = null;
-
-// Shared Firebase wait function
+// Shared Firebase wait function with better error handling
 function waitForFirebase() {
     return new Promise((resolve, reject) => {
-        const checkAuth = () => {
-            if (typeof auth !== 'undefined' && auth !== null && typeof db !== 'undefined' && db !== null) {
+        let attempts = 0;
+        const maxAttempts = 50; // 5 seconds total
+        
+        const checkFirebase = () => {
+            attempts++;
+            
+            if (typeof firebase !== 'undefined' && 
+                typeof auth !== 'undefined' && auth !== null && 
+                typeof db !== 'undefined' && db !== null) {
+                console.log('Firebase is ready after', attempts, 'attempts');
                 resolve();
+            } else if (attempts >= maxAttempts) {
+                reject(new Error('Firebase initialization timeout. Please refresh the page.'));
             } else {
-                setTimeout(checkAuth, 100);
+                setTimeout(checkFirebase, 100);
             }
         };
-        checkAuth();
         
-        // Timeout after 10 seconds
-        setTimeout(() => reject(new Error('Firebase initialization timeout')), 10000);
+        checkFirebase();
     });
 }
 
 // Initialize application when Firebase is ready
 async function initializeApp() {
     try {
+        console.log('Waiting for Firebase...');
         await waitForFirebase();
         console.log('Firebase is ready, initializing application...');
         
@@ -47,7 +53,18 @@ async function initializeApp() {
         
     } catch (error) {
         console.error('Failed to initialize application:', error);
-        showMessage('Failed to connect to database. Please refresh the page.', 'error');
+        showMessage('Failed to connect to database: ' + error.message, 'error');
+        
+        // Show a retry button
+        const loadingMessage = document.getElementById('loadingMessage');
+        if (loadingMessage) {
+            loadingMessage.innerHTML = `
+                <div style="text-align: center;">
+                    <p>Failed to initialize: ${error.message}</p>
+                    <button onclick="location.reload()" class="btn-primary">Retry</button>
+                </div>
+            `;
+        }
     }
 }
 
@@ -62,15 +79,13 @@ function setupAuthObserver() {
                 onUserAuthenticated(user);
             }
             
-            // Update UI for logged-in user
-            updateUI();
-            
             // Redirect to dashboard if on auth pages
             if (window.location.pathname.includes('login.html') || 
                 window.location.pathname === '/' || 
                 window.location.pathname.endsWith('index.html')) {
                 window.location.href = 'dashboard.html';
             }
+            updateUI();
         } else {
             currentUser = null;
             console.log('User logged out');
@@ -80,13 +95,11 @@ function setupAuthObserver() {
                 onUserAuthenticated(null);
             }
             
-            // Update UI for logged-out user
-            updateUI();
-            
             // Redirect to login if on dashboard
             if (window.location.pathname.includes('dashboard.html')) {
                 window.location.href = 'login.html';
             }
+            updateUI();
         }
     });
 }
@@ -198,19 +211,19 @@ async function handleSignup(e) {
     }
 }
 
-async function handleLogout() {
-    try {
-        if (typeof auth !== 'undefined' && auth !== null) {
-            await auth.signOut();
-            console.log('User signed out successfully');
-            // The auth state observer will handle the redirect
-        } else {
-            console.error('Firebase auth is not available for logout');
-            showMessage('Authentication service unavailable', 'error');
-        }
-    } catch (error) {
-        console.error('Sign out error:', error);
-        showMessage('Logout error: ' + error.message, 'error');
+function handleLogout() {
+    if (typeof auth !== 'undefined' && auth !== null) {
+        auth.signOut()
+            .then(() => {
+                console.log('User signed out successfully');
+            })
+            .catch((error) => {
+                console.error('Sign out error:', error);
+                showMessage('Logout error: ' + error.message, 'error');
+            });
+    } else {
+        console.error('Firebase auth is not available for logout');
+        showMessage('Authentication service unavailable', 'error');
     }
 }
 
@@ -250,7 +263,6 @@ function showMessage(message, type) {
         // Create a temporary message element
         messageElement = document.createElement('div');
         messageElement.id = 'tempAuthMessage';
-        messageElement.className = `message toast ${type}`;
         messageElement.style.cssText = `
             position: fixed;
             top: 20px;
@@ -262,55 +274,13 @@ function showMessage(message, type) {
             font-weight: 600;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             max-width: 300px;
-            transition: all 0.3s ease;
         `;
-        
-        // Add CSS classes for different message types
-        if (type === 'error') {
-            messageElement.style.backgroundColor = 'var(--danger)';
-            messageElement.style.borderLeft = '4px solid var(--danger)';
-        } else if (type === 'success') {
-            messageElement.style.backgroundColor = 'var(--success)';
-            messageElement.style.borderLeft = '4px solid var(--success)';
-        } else {
-            messageElement.style.backgroundColor = 'var(--primary)';
-            messageElement.style.borderLeft = '4px solid var(--primary)';
-        }
-        
         document.body.appendChild(messageElement);
-    } else {
-        // Use the existing auth message element but style it as toast
-        messageElement.className = `message toast ${type}`;
-        messageElement.style.position = 'fixed';
-        messageElement.style.top = '20px';
-        messageElement.style.right = '20px';
-        messageElement.style.padding = '15px 20px';
-        messageElement.style.borderRadius = '8px';
-        messageElement.style.color = 'white';
-        messageElement.style.zIndex = '10000';
-        messageElement.style.fontWeight = '600';
-        messageElement.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-        messageElement.style.maxWidth = '300px';
-        messageElement.style.transition = 'all 0.3s ease';
-        messageElement.style.margin = '0';
-        messageElement.style.border = 'none';
-        
-        if (type === 'error') {
-            messageElement.style.backgroundColor = 'var(--danger)';
-            messageElement.style.borderLeft = '4px solid var(--danger)';
-        } else if (type === 'success') {
-            messageElement.style.backgroundColor = 'var(--success)';
-            messageElement.style.borderLeft = '4px solid var(--success)';
-        } else {
-            messageElement.style.backgroundColor = 'var(--primary)';
-            messageElement.style.borderLeft = '4px solid var(--primary)';
-        }
     }
     
     messageElement.textContent = message;
-    messageElement.style.display = 'block';
-    messageElement.style.opacity = '1';
-    messageElement.style.visibility = 'visible';
+    messageElement.className = `message ${type}`;
+    messageElement.classList.remove('hidden');
     
     setTimeout(() => hideMessage(), 5000);
 }
@@ -320,30 +290,17 @@ function hideMessage() {
     const tempAuthMessage = document.getElementById('tempAuthMessage');
     
     if (authMessage) {
-        authMessage.style.opacity = '0';
-        authMessage.style.visibility = 'hidden';
-        setTimeout(() => {
-            authMessage.style.display = 'none';
-            // Reset auth message styles
-            authMessage.style.position = '';
-            authMessage.style.top = '';
-            authMessage.style.right = '';
-        }, 300);
+        authMessage.classList.add('hidden');
     }
-    if (tempAuthMessage) {
-        tempAuthMessage.style.opacity = '0';
-        tempAuthMessage.style.visibility = 'hidden';
-        setTimeout(() => {
-            if (tempAuthMessage.parentNode) {
-                tempAuthMessage.parentNode.removeChild(tempAuthMessage);
-            }
-        }, 300);
+    if (tempAuthMessage && tempAuthMessage.parentNode) {
+        tempAuthMessage.parentNode.removeChild(tempAuthMessage);
     }
 }
 
 function updateUI() {
     const userInfo = document.getElementById('userInfo');
     const usernameDisplay = document.getElementById('usernameDisplay');
+    const mainContent = document.getElementById('mainContent');
     
     if (currentUser && userInfo && usernameDisplay && typeof db !== 'undefined' && db !== null) {
         // Load user profile data
