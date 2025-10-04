@@ -33,6 +33,13 @@ async function initializeApp() {
             currentUser = null;
             clearLocalData();
             skipRedirect = true;
+
+            if (window.location.search.includes('action=signup')) {
+                showSignupForm();
+            } else {
+                showLoginForm();
+            }
+            
         }
         
         // Just set up auth and event listeners — don't unhide dashboard yet
