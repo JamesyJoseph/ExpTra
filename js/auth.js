@@ -1,4 +1,7 @@
-// js/auth.js
+// Global variables
+let currentUser = null;
+let auth = null;
+let db = null;
 
 // Shared Firebase wait function with better error handling
 function waitForFirebase() {
@@ -95,9 +98,9 @@ function setupAuthObserver() {
                 onUserAuthenticated(null);
             }
             
-            // Redirect to login if on dashboard
+            // FIXED: Redirect to login page (not home page) to allow different login
             if (window.location.pathname.includes('dashboard.html')) {
-                window.location.href = 'index.html';
+                window.location.href = 'login.html'; // Go to login page for new login
             }
             updateUI();
         }
@@ -148,7 +151,7 @@ function setupEventListeners() {
 async function handleLogin(e) {
     if (e) e.preventDefault();
     
-    if (typeof auth === 'undefined' || auth === null) {
+    if (!auth) {
         showMessage('Authentication service is not available. Please refresh the page.', 'error');
         return;
     }
@@ -157,6 +160,7 @@ async function handleLogin(e) {
     const password = document.getElementById('loginPassword').value;
     
     try {
+        showMessage('Signing in...', 'info');
         const userCredential = await auth.signInWithEmailAndPassword(email, password);
         console.log('Login successful:', userCredential.user.email);
         
@@ -173,7 +177,7 @@ async function handleLogin(e) {
 async function handleSignup(e) {
     if (e) e.preventDefault();
     
-    if (typeof auth === 'undefined' || auth === null) {
+    if (!auth || !db) {
         showMessage('Authentication service is not available. Please refresh the page.', 'error');
         return;
     }
@@ -183,23 +187,18 @@ async function handleSignup(e) {
     const password = document.getElementById('signupPassword').value;
     
     try {
+        showMessage('Creating account...', 'info');
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
         console.log('Signup successful:', user.email);
         
         // Create user document in Firestore
-        if (typeof db !== 'undefined' && db !== null) {
-            await db.collection('users').doc(user.uid).set({
-                username: username,
-                email: email,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            console.log('User document created in Firestore');
-        } else {
-            console.error('Firestore is not available');
-            showMessage('Database connection error. Please try again.', 'error');
-            return;
-        }
+        await db.collection('users').doc(user.uid).set({
+            username: username,
+            email: email,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log('User document created in Firestore');
         
         if (document.getElementById('signupForm')) {
             document.getElementById('signupForm').reset();
@@ -235,8 +234,13 @@ async function handleLogout() {
         // Clear any local data
         currentUser = null;
         
-        // The auth state observer will handle the redirect
-        showMessage('Logged out successfully', 'success');
+        // Show success message briefly before redirect
+        showMessage('Logged out successfully. Redirecting to login...', 'success');
+        
+        // Add a small delay to show the success message, then redirect to login page
+        setTimeout(() => {
+            window.location.href = 'login.html';
+        }, 1500);
         
     } catch (error) {
         console.error('Sign out error:', error);
@@ -249,7 +253,7 @@ async function handleLogout() {
             logoutBtn.disabled = false;
         }
         
-        // Force redirect if auth fails completely
+        // Force redirect to login page if auth fails completely
         if (error.code === 'auth/network-request-failed') {
             setTimeout(() => {
                 window.location.href = 'login.html';
@@ -305,13 +309,26 @@ function showMessage(message, type) {
             font-weight: 600;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             max-width: 300px;
+            transition: opacity 0.3s ease;
         `;
+        
+        // Style based on type
+        if (type === 'error') {
+            messageElement.style.backgroundColor = '#e74c3c';
+        } else if (type === 'success') {
+            messageElement.style.backgroundColor = '#27ae60';
+        } else if (type === 'info') {
+            messageElement.style.backgroundColor = '#3498db';
+        } else {
+            messageElement.style.backgroundColor = '#34495e';
+        }
+        
         document.body.appendChild(messageElement);
     }
     
     messageElement.textContent = message;
-    messageElement.className = `message ${type}`;
-    messageElement.classList.remove('hidden');
+    messageElement.style.display = 'block';
+    messageElement.style.opacity = '1';
     
     setTimeout(() => hideMessage(), 5000);
 }
@@ -332,6 +349,7 @@ function hideMessage() {
         }, 300);
     }
 }
+
 function updateUI() {
     const userInfo = document.getElementById('userInfo');
     const usernameDisplay = document.getElementById('usernameDisplay');
