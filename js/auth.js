@@ -250,6 +250,7 @@ function showMessage(message, type) {
         // Create a temporary message element
         messageElement = document.createElement('div');
         messageElement.id = 'tempAuthMessage';
+        messageElement.className = `message toast ${type}`;
         messageElement.style.cssText = `
             position: fixed;
             top: 20px;
@@ -266,19 +267,20 @@ function showMessage(message, type) {
         
         // Add CSS classes for different message types
         if (type === 'error') {
-            messageElement.style.backgroundColor = '#e74c3c';
-            messageElement.style.borderLeft = '4px solid #c0392b';
+            messageElement.style.backgroundColor = 'var(--danger)';
+            messageElement.style.borderLeft = '4px solid var(--danger)';
         } else if (type === 'success') {
-            messageElement.style.backgroundColor = '#27ae60';
-            messageElement.style.borderLeft = '4px solid #229954';
+            messageElement.style.backgroundColor = 'var(--success)';
+            messageElement.style.borderLeft = '4px solid var(--success)';
         } else {
-            messageElement.style.backgroundColor = '#3498db';
-            messageElement.style.borderLeft = '4px solid #2980b9';
+            messageElement.style.backgroundColor = 'var(--primary)';
+            messageElement.style.borderLeft = '4px solid var(--primary)';
         }
         
         document.body.appendChild(messageElement);
     } else {
-        // Style the existing message element
+        // Use the existing auth message element but style it as toast
+        messageElement.className = `message toast ${type}`;
         messageElement.style.position = 'fixed';
         messageElement.style.top = '20px';
         messageElement.style.right = '20px';
@@ -290,22 +292,25 @@ function showMessage(message, type) {
         messageElement.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
         messageElement.style.maxWidth = '300px';
         messageElement.style.transition = 'all 0.3s ease';
+        messageElement.style.margin = '0';
+        messageElement.style.border = 'none';
         
         if (type === 'error') {
-            messageElement.style.backgroundColor = '#e74c3c';
-            messageElement.style.borderLeft = '4px solid #c0392b';
+            messageElement.style.backgroundColor = 'var(--danger)';
+            messageElement.style.borderLeft = '4px solid var(--danger)';
         } else if (type === 'success') {
-            messageElement.style.backgroundColor = '#27ae60';
-            messageElement.style.borderLeft = '4px solid #229954';
+            messageElement.style.backgroundColor = 'var(--success)';
+            messageElement.style.borderLeft = '4px solid var(--success)';
         } else {
-            messageElement.style.backgroundColor = '#3498db';
-            messageElement.style.borderLeft = '4px solid #2980b9';
+            messageElement.style.backgroundColor = 'var(--primary)';
+            messageElement.style.borderLeft = '4px solid var(--primary)';
         }
     }
     
     messageElement.textContent = message;
     messageElement.style.display = 'block';
     messageElement.style.opacity = '1';
+    messageElement.style.visibility = 'visible';
     
     setTimeout(() => hideMessage(), 5000);
 }
@@ -316,12 +321,18 @@ function hideMessage() {
     
     if (authMessage) {
         authMessage.style.opacity = '0';
+        authMessage.style.visibility = 'hidden';
         setTimeout(() => {
             authMessage.style.display = 'none';
+            // Reset auth message styles
+            authMessage.style.position = '';
+            authMessage.style.top = '';
+            authMessage.style.right = '';
         }, 300);
     }
     if (tempAuthMessage) {
         tempAuthMessage.style.opacity = '0';
+        tempAuthMessage.style.visibility = 'hidden';
         setTimeout(() => {
             if (tempAuthMessage.parentNode) {
                 tempAuthMessage.parentNode.removeChild(tempAuthMessage);
