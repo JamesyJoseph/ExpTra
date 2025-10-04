@@ -43,6 +43,9 @@ body {
     max-width: 800px;
     margin: 0 auto;
     padding: 20px;
+    min-height: calc(100vh - 120px);
+    display: flex;
+    flex-direction: column;
 }
 
 .card {
@@ -54,7 +57,7 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Theme Toggle Button */
+/* Theme Toggle */
 .theme-toggle {
     position: relative;
     width: 60px;
@@ -90,15 +93,12 @@ body {
     left: 8px;
     transform: translateY(-50%);
     font-size: 12px;
-    opacity: 1;
-    transition: opacity 0.3s ease;
 }
 
 [data-theme="dark"] .theme-toggle::after {
     content: '🌙';
     left: auto;
     right: 8px;
-    opacity: 1;
 }
 
 .theme-toggle-container {
@@ -115,7 +115,7 @@ body {
     font-weight: 500;
 }
 
-/* Header Styles */
+/* Header */
 header {
     display: flex;
     justify-content: space-between;
@@ -147,9 +147,6 @@ button {
 .btn-primary {
     background-color: var(--primary);
     color: white;
-    text-decoration: none;
-    display: inline-block;
-    text-align: center;
 }
 
 .btn-success {
@@ -166,17 +163,14 @@ button {
     background-color: transparent;
     border: 1px solid var(--primary);
     color: var(--primary);
-    text-decoration: none;
-    display: inline-block;
-    text-align: center;
 }
 
-button:hover, .btn-primary:hover, .btn-outline:hover {
+button:hover {
     opacity: 0.9;
     transform: translateY(-2px);
 }
 
-/* Form Elements for Dark Theme */
+/* Form Elements */
 input, textarea, select {
     background-color: var(--light);
     color: var(--dark);
@@ -189,19 +183,7 @@ input:focus, textarea:focus, select:focus {
     box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
 }
 
-/* Modal Styles for Dark Theme */
-.modal-content {
-    background-color: var(--light);
-    color: var(--dark);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Transaction Items for Dark Theme */
-.transaction-item {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Footer Styles for Dark Theme */
+/* Footer */
 .footer {
     background-color: var(--dark);
     color: var(--light);
@@ -231,19 +213,9 @@ input:focus, textarea:focus, select:focus {
     text-decoration: underline;
 }
 
-/* Adjust main content to accommodate footer */
-.container {
-    min-height: calc(100vh - 120px);
-    display: flex;
-    flex-direction: column;
-}
-
 main {
     flex: 1;
 }
-
-/* Rest of your existing styles remain the same... */
-/* (Keep all your existing styles for hero-section, auth-container, balance-section, etc.) */
 
 /* Hero Section */
 .hero-section {
@@ -341,25 +313,6 @@ main {
     text-decoration: none;
 }
 
-.message {
-    padding: 10px;
-    border-radius: 5px;
-    margin-top: 15px;
-    text-align: center;
-}
-
-.message.success {
-    background-color: rgba(56, 176, 0, 0.2);
-    color: var(--success);
-    border: 1px solid var(--success);
-}
-
-.message.error {
-    background-color: rgba(230, 57, 70, 0.2);
-    color: var(--danger);
-    border: 1px solid var(--danger);
-}
-
 /* Dashboard Styles */
 .balance-section {
     text-align: center;
@@ -376,7 +329,6 @@ main {
     font-size: 48px;
     font-weight: 700;
     margin-bottom: 20px;
-    color: var(--dark);
 }
 
 .action-buttons {
@@ -410,7 +362,6 @@ main {
 .transaction-section h2 {
     margin-bottom: 15px;
     font-size: 20px;
-    color: var(--dark);
 }
 
 .filter-section {
@@ -449,7 +400,6 @@ main {
 .transaction-note {
     font-weight: 500;
     margin-bottom: 5px;
-    color: var(--dark);
 }
 
 .transaction-time {
@@ -502,7 +452,6 @@ main {
 .modal-title {
     font-size: 20px;
     font-weight: 600;
-    color: var(--dark);
 }
 
 .close-btn {
@@ -521,7 +470,6 @@ label {
     display: block;
     margin-bottom: 8px;
     font-weight: 500;
-    color: var(--dark);
 }
 
 input, textarea {
@@ -530,8 +478,6 @@ input, textarea {
     border: 1px solid var(--gray);
     border-radius: 8px;
     font-size: 16px;
-    background-color: var(--light);
-    color: var(--dark);
 }
 
 textarea {
@@ -557,7 +503,6 @@ textarea {
 
 .username {
     font-weight: 600;
-    color: var(--dark);
 }
 
 .logout-btn {
@@ -572,6 +517,68 @@ textarea {
     color: var(--gray);
 }
 
+/* Balance States */
+.balance-positive {
+    color: var(--dark);
+}
+
+.balance-low {
+    color: var(--warning);
+}
+
+.balance-zero {
+    color: var(--danger);
+}
+
+/* Message Styles */
+.message {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    border-radius: 8px;
+    color: white;
+    z-index: 10000;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    max-width: 300px;
+}
+
+.message.success {
+    background-color: var(--success);
+}
+
+.message.error {
+    background-color: var(--danger);
+}
+
+.message.warning {
+    background-color: var(--warning);
+}
+
+/* PDF Button */
+.pdf-btn {
+    padding: 8px 16px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.transaction-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.transaction-header h2 {
+    margin: 0;
+}
+
+/* Responsive */
 @media (max-width: 600px) {
     .container {
         padding: 15px;
@@ -606,131 +613,7 @@ textarea {
     .theme-label {
         display: none;
     }
-}
-/* ------------------------- */
-.balance-section {
-    position: relative;
-}
-
-.balance-warning {
-    font-size: 14px;
-    color: var(--warning);
-    margin-top: 5px;
-}
-
-.balance-danger {
-    font-size: 14px;
-    color: var(--danger);
-    margin-top: 5px;
-    font-weight: 600;
-}
-
-/* Balance amount color states */
-.balance-positive {
-    color: var(--dark);
-}
-
-.balance-low {
-    color: var(--warning);
-}
-
-.balance-zero {
-    color: var(--danger);
-}
-
-/* Message styles for notifications */
-.message {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 15px 20px;
-    border-radius: 8px;
-    color: white;
-    z-index: 10000;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    max-width: 300px;
-}
-
-.message.success {
-    background-color: var(--success);
-}
-
-.message.error {
-    background-color: var(--danger);
-}
-
-.message.warning {
-    background-color: var(--warning);
-}
-
-/* Footer Styles */
-.footer {
-    background-color: var(--dark);
-    color: var(--light);
-    text-align: center;
-    padding: 20px;
-    margin-top: 40px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.footer-content {
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-.footer p {
-    margin: 0;
-    font-size: 14px;
-    opacity: 0.9;
-}
-
-.footer a {
-    color: var(--income);
-    text-decoration: none;
-}
-
-.footer a:hover {
-    text-decoration: underline;
-    color: var(--primary);
-}
-
-/* Adjust main content to accommodate footer */
-.container {
-    min-height: calc(100vh - 120px);
-    display: flex;
-    flex-direction: column;
-}
-
-main {
-    flex: 1;
-}
-
-/* -------------------------------- */
-/* PDF Button Styles */
-.pdf-btn {
-    padding: 8px 16px;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.transaction-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.transaction-header h2 {
-    margin: 0;
-}
-
-@media (max-width: 600px) {
+    
     .transaction-header {
         flex-direction: column;
         align-items: stretch;
