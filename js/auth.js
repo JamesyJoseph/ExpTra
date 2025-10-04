@@ -1,5 +1,5 @@
 // js/auth.js
-let skipRedirect = false;
+
 // Shared Firebase wait function with better error handling
 function waitForFirebase() {
     return new Promise((resolve, reject) => {
@@ -155,7 +155,7 @@ async function handleLogin(e) {
             document.getElementById('loginForm').reset();
         }
         showMessage('Login successful!', 'success');
-        skipRedirect = false;
+        
         window.location.href = 'dashboard.html';
     } catch (error) {
         console.error('Login error:', error);
@@ -201,7 +201,7 @@ async function handleSignup(e) {
             document.getElementById('signupForm').reset();
         }
         showMessage('Account created successfully!', 'success');
-        skipRedirect = false;
+        
         window.location.href = 'dashboard.html';
     } catch (error) {
         console.error('Signup error:', error);
