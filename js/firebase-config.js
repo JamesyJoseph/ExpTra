@@ -1,5 +1,6 @@
 // js/firebase-config.js
 
+// Global Firebase variables
 let firebaseConfig = null;
 let auth = null;
 let db = null;
@@ -8,9 +9,24 @@ let db = null;
 let currentUser = null;
 let userTransactions = [];
 
+// Check if Firebase scripts are loaded
+function checkFirebaseDependencies() {
+    if (typeof firebase === 'undefined') {
+        throw new Error('Firebase SDK not loaded. Check your internet connection and script tags.');
+    }
+    
+    if (typeof firebase.app === 'undefined') {
+        throw new Error('Firebase App not available.');
+    }
+    
+    return true;
+}
+
 async function loadFirebaseConfig() {
     try {
-        // Try different possible paths
+        console.log('Loading Firebase configuration...');
+        
+        // Try different possible paths for config file
         const possiblePaths = [
             '../config/firebase-config.txt',
             './config/firebase-config.txt',
@@ -38,7 +54,7 @@ async function loadFirebaseConfig() {
         }
         
         if (!configText) {
-            throw new Error('Could not find firebase-config.txt in any of the expected locations');
+            throw new Error('Could not find firebase-config.txt in any of the expected locations: ' + possiblePaths.join(', '));
         }
         
         // Parse the text file into a config object
@@ -47,12 +63,13 @@ async function loadFirebaseConfig() {
         
         lines.forEach(line => {
             // Skip empty lines and comments
-            if (line.trim() === '' || line.trim().startsWith('#')) {
+            const trimmedLine = line.trim();
+            if (trimmedLine === '' || trimmedLine.startsWith('#')) {
                 return;
             }
-            const [key, value] = line.split('=');
+            const [key, value] = trimmedLine.split('=');
             if (key && value) {
-                config[key.trim()] = value.trim();
+                config[key.trim()] = value.trim().replace(/['"]/g, ''); // Remove quotes
             }
         });
         
@@ -61,10 +78,10 @@ async function loadFirebaseConfig() {
         const missingKeys = requiredKeys.filter(key => !config[key]);
         
         if (missingKeys.length > 0) {
-            throw new Error(`Missing Firebase configuration: ${missingKeys.join(', ')}`);
+            throw new Error(`Missing Firebase configuration keys: ${missingKeys.join(', ')}`);
         }
         
-        console.log('Firebase config loaded successfully:', config);
+        console.log('Firebase config loaded successfully from:', successfulPath);
         return config;
         
     } catch (error) {
@@ -75,33 +92,64 @@ async function loadFirebaseConfig() {
 
 async function initializeFirebase() {
     try {
+        console.log('Initializing Firebase...');
+        
+        // Check if Firebase SDK is available
+        checkFirebaseDependencies();
+        
         // Load configuration from text file
         firebaseConfig = await loadFirebaseConfig();
         
+        console.log('Firebase config:', {
+            ...firebaseConfig,
+            apiKey: `${firebaseConfig.apiKey.substring(0, 10)}...` // Hide full API key in logs
+        });
+        
         // Initialize Firebase
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
+        let app;
+        if (firebase.apps.length === 0) {
+            app = firebase.initializeApp(firebaseConfig);
+            console.log('Firebase app initialized');
+        } else {
+            app = firebase.app();
+            console.log('Using existing Firebase app');
         }
         
         // Initialize Firebase services
         auth = firebase.auth();
         db = firebase.firestore();
         
-        console.log("Firebase initialized successfully");
+        // Configure Firestore settings
+        db.settings({
+            cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED
+        });
         
-        // Enable offline persistence (optional)
-        db.enablePersistence()
-          .catch((err) => {
-              console.log("Persistence failed: ", err);
-          });
-          
+        // Enable offline persistence
+        try {
+            await db.enablePersistence({ synchronizeTabs: true });
+            console.log('Firestore persistence enabled');
+        } catch (err) {
+            console.warn('Firestore persistence failed:', err.code);
+            if (err.code === 'failed-precondition') {
+                console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+            } else if (err.code === 'unimplemented') {
+                console.warn('The current browser doesn\'t support persistence');
+            }
+        }
+        
+        console.log("Firebase initialized successfully");
+        return { auth, db };
+        
     } catch (error) {
         console.error("Firebase initialization error:", error);
         showFirebaseError(error.message);
+        throw error;
     }
 }
 
 function showFirebaseError(message) {
+    console.error('Firebase Error:', message);
+    
     // Create error message for user
     const errorDiv = document.createElement('div');
     errorDiv.style.cssText = `
@@ -115,10 +163,24 @@ function showFirebaseError(message) {
         text-align: center;
         z-index: 10000;
         font-weight: bold;
+        font-family: Arial, sans-serif;
     `;
-    errorDiv.textContent = `Firebase Error: ${message}`;
+    errorDiv.innerHTML = `
+        <strong>Firebase Error:</strong> ${message}
+        <br><small>Please check your console for details and refresh the page.</small>
+    `;
     document.body.appendChild(errorDiv);
+    
+    // Remove error after 10 seconds
+    setTimeout(() => {
+        if (errorDiv.parentNode) {
+            errorDiv.parentNode.removeChild(errorDiv);
+        }
+    }, 10000);
 }
 
 // Initialize Firebase when the script loads
-initializeFirebase();
+// But don't block other scripts - let them wait for initialization
+initializeFirebase().catch(error => {
+    console.error('Failed to initialize Firebase:', error);
+});
