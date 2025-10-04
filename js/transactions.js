@@ -11,13 +11,9 @@ async function initializeTransactions() {
         await waitForFirebase();
         console.log('Firebase ready for transactions');
         
-        // Initialize DOM elements after Firebase is ready
         initializeDOMElements();
-        
-        // Set up event listeners
         setupEventListeners();
         
-        // Load transactions if user is authenticated
         if (currentUser) {
             loadTransactions();
         }
@@ -41,14 +37,9 @@ function initializeDOMElements() {
     transactionList = document.getElementById('transactionList');
     filterBtns = document.querySelectorAll('.filter-btn');
     pdfBtn = document.getElementById('pdfBtn');
-    
-    console.log('DOM elements initialized');
 }
 
 function setupEventListeners() {
-    console.log('Setting up event listeners...');
-    
-    // Event Listeners
     if (incomeBtn) incomeBtn.addEventListener('click', () => incomeModal.style.display = 'flex');
     if (expenseBtn) expenseBtn.addEventListener('click', () => expenseModal.style.display = 'flex');
     if (closeIncomeModal) closeIncomeModal.addEventListener('click', () => incomeModal.style.display = 'none');
@@ -60,13 +51,11 @@ function setupEventListeners() {
         pdfBtn.addEventListener('click', generatePDF);
     }
 
-    // Close modals when clicking outside
     window.addEventListener('click', (e) => {
         if (e.target === incomeModal) incomeModal.style.display = 'none';
         if (e.target === expenseModal) expenseModal.style.display = 'none';
     });
 
-    // Filter buttons
     if (filterBtns) {
         filterBtns.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -76,12 +65,8 @@ function setupEventListeners() {
             });
         });
     }
-    
-    console.log('Event listeners setup complete');
 }
 
-// Use the auth state observer from auth.js instead of duplicating it
-// This will be called by auth.js when the user state changes
 function onUserAuthenticated(user) {
     console.log('User authentication state changed:', user ? 'Logged in' : 'Logged out');
     if (user) {
@@ -93,7 +78,6 @@ function onUserAuthenticated(user) {
     }
 }
 
-// Functions
 async function handleIncome(e) {
     e.preventDefault();
     
@@ -147,12 +131,10 @@ async function handleExpense(e) {
         return;
     }
     
-    // Calculate current balance before adding the expense
     const currentBalance = calculateCurrentBalance();
     
-    // Check if expense would make balance negative
     if (currentBalance - amount < 0) {
-        alert('Insufficient balance! You cannot spend more than your current balance.');
+        showMessage('Insufficient balance! You cannot spend more than your current balance.', 'error');
         return;
     }
     
@@ -177,12 +159,10 @@ async function handleExpense(e) {
     }
 }
 
-// Safe server timestamp function
 function getServerTimestamp() {
     if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
         return firebase.firestore.FieldValue.serverTimestamp();
     } else {
-        // Fallback to client timestamp if Firebase not available
         console.warn('Firebase not available, using client timestamp');
         return new Date();
     }
@@ -208,7 +188,6 @@ function loadTransactions() {
     
     console.log('Loading transactions for user:', currentUser.uid);
     
-    // Load transactions with real-time updates
     db.collection('users').doc(currentUser.uid)
         .collection('transactions')
         .orderBy('timestamp', 'desc')
@@ -219,7 +198,6 @@ function loadTransactions() {
                 userTransactions.push({
                     id: doc.id,
                     ...data,
-                    // Ensure date is properly formatted
                     date: data.date || data.timestamp?.toDate?.() || new Date()
                 });
             });
@@ -238,7 +216,6 @@ function updateBalance() {
     if (balanceAmount) {
         balanceAmount.textContent = `$${Math.max(0, balance).toFixed(2)}`;
         
-        // Add visual indicator for low balance
         if (balance < 50 && balance > 0) {
             balanceAmount.style.color = 'var(--warning)';
         } else if (balance <= 0) {
@@ -262,7 +239,6 @@ function renderTransactions(filter) {
     
     let filteredTransactions = [...userTransactions];
     
-    // Apply filter
     if (filter === 'today') {
         const today = new Date().toDateString();
         filteredTransactions = filteredTransactions.filter(t => {
@@ -326,42 +302,6 @@ function formatDate(dateString) {
     }
 }
 
-function showMessage(message, type) {
-    // Create a temporary message element
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${type}`;
-    messageDiv.textContent = message;
-    messageDiv.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 15px 20px;
-        border-radius: 8px;
-        color: white;
-        z-index: 10000;
-        font-weight: 600;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    `;
-    
-    if (type === 'success') {
-        messageDiv.style.backgroundColor = 'var(--success)';
-    } else if (type === 'error') {
-        messageDiv.style.backgroundColor = 'var(--danger)';
-    } else {
-        messageDiv.style.backgroundColor = 'var(--warning)';
-    }
-    
-    document.body.appendChild(messageDiv);
-    
-    // Remove message after 3 seconds
-    setTimeout(() => {
-        if (messageDiv.parentNode) {
-            messageDiv.parentNode.removeChild(messageDiv);
-        }
-    }, 3000);
-}
-
-// Simple PDF generation
 function generatePDF() {
     if (!currentUser || userTransactions.length === 0) {
         showMessage('No transactions to export!', 'error');
@@ -369,7 +309,6 @@ function generatePDF() {
     }
 
     try {
-        // Check if jsPDF is available
         if (typeof jspdf === 'undefined' || !jspdf.jsPDF) {
             showMessage('PDF library not loaded. Please refresh the page.', 'error');
             return;
@@ -381,22 +320,18 @@ function generatePDF() {
         const currentDate = new Date().toLocaleDateString();
         const username = document.getElementById('usernameDisplay')?.textContent || 'User';
         
-        // Title
         doc.setFontSize(16);
         doc.setTextColor(67, 97, 238);
         doc.text('ExpTra - Transaction Report', 105, 20, { align: 'center' });
         
-        // User info
         doc.setFontSize(10);
         doc.setTextColor(100, 100, 100);
         doc.text(`User: ${username} | Generated: ${currentDate}`, 105, 30, { align: 'center' });
         
-        // Balance
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
         doc.text(`Current Balance: $${calculateCurrentBalance().toFixed(2)}`, 20, 45);
         
-        // Simple two-column layout
         let yPosition = 60;
         
         userTransactions.forEach((transaction) => {
@@ -409,19 +344,17 @@ function generatePDF() {
             const formattedDate = date.toLocaleDateString();
             const formattedTime = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
-            // Left side - Details
             doc.setFontSize(9);
             doc.setTextColor(0, 0, 0);
             doc.text(`${formattedDate} ${formattedTime}`, 20, yPosition);
             doc.text(transaction.note, 20, yPosition + 5);
             
-            // Right side - Amount with color coding
             const amountText = `$${transaction.amount.toFixed(2)}`;
             if (transaction.type === 'income') {
-                doc.setTextColor(76, 201, 240); // Income color
+                doc.setTextColor(76, 201, 240);
                 doc.text(`+${amountText}`, 180, yPosition, { align: 'right' });
             } else {
-                doc.setTextColor(247, 37, 133); // Expense color
+                doc.setTextColor(247, 37, 133);
                 doc.text(`-${amountText}`, 180, yPosition, { align: 'right' });
             }
             
@@ -443,33 +376,6 @@ function generatePDF() {
     }
 }
 
-// Wait for Firebase function
-function waitForFirebase() {
-    return new Promise((resolve, reject) => {
-        let attempts = 0;
-        const maxAttempts = 50; // 5 seconds
-        
-        const checkFirebase = () => {
-            attempts++;
-            console.log(`Checking Firebase... attempt ${attempts}`);
-            
-            if (typeof firebase !== 'undefined' && 
-                typeof auth !== 'undefined' && auth !== null && 
-                typeof db !== 'undefined' && db !== null) {
-                console.log('Firebase is ready!');
-                resolve();
-            } else if (attempts >= maxAttempts) {
-                reject(new Error('Firebase initialization timeout. Please refresh the page.'));
-            } else {
-                setTimeout(checkFirebase, 100);
-            }
-        };
-        
-        checkFirebase();
-    });
-}
-
-// Initialize transactions when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing transactions...');
     initializeTransactions();
