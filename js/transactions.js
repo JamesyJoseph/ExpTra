@@ -7,6 +7,7 @@ let closeIncomeModal, closeExpenseModal, balanceAmount, transactionList, filterB
 // Initialize transactions when Firebase is ready
 async function initializeTransactions() {
     try {
+        console.log('Initializing transactions...');
         await waitForFirebase();
         console.log('Firebase ready for transactions');
         
@@ -23,6 +24,7 @@ async function initializeTransactions() {
         
     } catch (error) {
         console.error('Failed to initialize transactions:', error);
+        showMessage('Failed to initialize transactions: ' + error.message, 'error');
     }
 }
 
@@ -39,9 +41,13 @@ function initializeDOMElements() {
     transactionList = document.getElementById('transactionList');
     filterBtns = document.querySelectorAll('.filter-btn');
     pdfBtn = document.getElementById('pdfBtn');
+    
+    console.log('DOM elements initialized');
 }
 
 function setupEventListeners() {
+    console.log('Setting up event listeners...');
+    
     // Event Listeners
     if (incomeBtn) incomeBtn.addEventListener('click', () => incomeModal.style.display = 'flex');
     if (expenseBtn) expenseBtn.addEventListener('click', () => expenseModal.style.display = 'flex');
@@ -70,11 +76,14 @@ function setupEventListeners() {
             });
         });
     }
+    
+    console.log('Event listeners setup complete');
 }
 
 // Use the auth state observer from auth.js instead of duplicating it
 // This will be called by auth.js when the user state changes
 function onUserAuthenticated(user) {
+    console.log('User authentication state changed:', user ? 'Logged in' : 'Logged out');
     if (user) {
         loadTransactions();
     } else {
@@ -107,7 +116,7 @@ async function handleIncome(e) {
             amount: amount,
             note: note,
             date: new Date().toISOString(),
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            timestamp: getServerTimestamp()
         };
         
         await db.collection('users').doc(currentUser.uid)
@@ -153,7 +162,7 @@ async function handleExpense(e) {
             amount: amount,
             note: note,
             date: new Date().toISOString(),
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            timestamp: getServerTimestamp()
         };
         
         await db.collection('users').doc(currentUser.uid)
@@ -165,6 +174,17 @@ async function handleExpense(e) {
     } catch (error) {
         console.error('Error adding expense:', error);
         showMessage('Error adding expense: ' + error.message, 'error');
+    }
+}
+
+// Safe server timestamp function
+function getServerTimestamp() {
+    if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
+        return firebase.firestore.FieldValue.serverTimestamp();
+    } else {
+        // Fallback to client timestamp if Firebase not available
+        console.warn('Firebase not available, using client timestamp');
+        return new Date();
     }
 }
 
@@ -181,7 +201,12 @@ function calculateCurrentBalance() {
 }
 
 function loadTransactions() {
-    if (!currentUser || typeof db === 'undefined' || db === null) return;
+    if (!currentUser || typeof db === 'undefined' || db === null) {
+        console.log('Cannot load transactions: no user or database');
+        return;
+    }
+    
+    console.log('Loading transactions for user:', currentUser.uid);
     
     // Load transactions with real-time updates
     db.collection('users').doc(currentUser.uid)
@@ -190,16 +215,20 @@ function loadTransactions() {
         .onSnapshot((snapshot) => {
             userTransactions = [];
             snapshot.forEach(doc => {
+                const data = doc.data();
                 userTransactions.push({
                     id: doc.id,
-                    ...doc.data()
+                    ...data,
+                    // Ensure date is properly formatted
+                    date: data.date || data.timestamp?.toDate?.() || new Date()
                 });
             });
+            console.log(`Loaded ${userTransactions.length} transactions`);
             updateBalance();
             renderTransactions('all');
         }, (error) => {
             console.error('Error loading transactions: ', error);
-            showMessage('Error loading transactions', 'error');
+            showMessage('Error loading transactions: ' + error.message, 'error');
         });
 }
 
@@ -236,9 +265,10 @@ function renderTransactions(filter) {
     // Apply filter
     if (filter === 'today') {
         const today = new Date().toDateString();
-        filteredTransactions = filteredTransactions.filter(t => 
-            new Date(t.date).toDateString() === today
-        );
+        filteredTransactions = filteredTransactions.filter(t => {
+            const transactionDate = new Date(t.date);
+            return transactionDate.toDateString() === today;
+        });
     } else if (filter === 'month') {
         const now = new Date();
         const currentMonth = now.getMonth();
@@ -260,7 +290,7 @@ function renderTransactions(filter) {
         transactionList.innerHTML = filteredTransactions.map(transaction => `
             <div class="transaction-item">
                 <div class="transaction-info">
-                    <div class="transaction-note">${transaction.note}</div>
+                    <div class="transaction-note">${escapeHtml(transaction.note)}</div>
                     <div class="transaction-time">${formatDate(transaction.date)}</div>
                 </div>
                 <div class="transaction-amount ${transaction.type === 'income' ? 'income-amount' : 'expense-amount'}">
@@ -271,15 +301,29 @@ function renderTransactions(filter) {
     }
 }
 
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: 'numeric'
-    });
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) {
+            return 'Invalid Date';
+        }
+        return date.toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric'
+        });
+    } catch (error) {
+        console.error('Error formatting date:', error);
+        return 'Invalid Date';
+    }
 }
 
 function showMessage(message, type) {
@@ -325,11 +369,17 @@ function generatePDF() {
     }
 
     try {
-        const { jsPDF } = window.jspdf;
+        // Check if jsPDF is available
+        if (typeof jspdf === 'undefined' || !jspdf.jsPDF) {
+            showMessage('PDF library not loaded. Please refresh the page.', 'error');
+            return;
+        }
+
+        const { jsPDF } = jspdf;
         const doc = new jsPDF();
         
         const currentDate = new Date().toLocaleDateString();
-        const username = document.getElementById('usernameDisplay').textContent;
+        const username = document.getElementById('usernameDisplay')?.textContent || 'User';
         
         // Title
         doc.setFontSize(16);
@@ -382,7 +432,7 @@ function generatePDF() {
             yPosition += 15;
         });
         
-        const fileName = `ExpTra_${username}_${currentDate.replace(/\//g, '-')}.pdf`;
+        const fileName = `ExpTra_${username.replace(/\s+/g, '_')}_${currentDate.replace(/\//g, '-')}.pdf`;
         doc.save(fileName);
         
         showMessage('PDF exported successfully!', 'success');
@@ -393,22 +443,34 @@ function generatePDF() {
     }
 }
 
-// Wait for Firebase function (same as in auth.js)
+// Wait for Firebase function
 function waitForFirebase() {
     return new Promise((resolve, reject) => {
+        let attempts = 0;
+        const maxAttempts = 50; // 5 seconds
+        
         const checkFirebase = () => {
-            if (typeof auth !== 'undefined' && auth !== null && typeof db !== 'undefined' && db !== null) {
+            attempts++;
+            console.log(`Checking Firebase... attempt ${attempts}`);
+            
+            if (typeof firebase !== 'undefined' && 
+                typeof auth !== 'undefined' && auth !== null && 
+                typeof db !== 'undefined' && db !== null) {
+                console.log('Firebase is ready!');
                 resolve();
+            } else if (attempts >= maxAttempts) {
+                reject(new Error('Firebase initialization timeout. Please refresh the page.'));
             } else {
                 setTimeout(checkFirebase, 100);
             }
         };
-        checkFirebase();
         
-        // Timeout after 10 seconds
-        setTimeout(() => reject(new Error('Firebase initialization timeout')), 10000);
+        checkFirebase();
     });
 }
 
 // Initialize transactions when DOM is loaded
-document.addEventListener('DOMContentLoaded', initializeTransactions);
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing transactions...');
+    initializeTransactions();
+});
