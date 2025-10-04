@@ -1,20 +1,14 @@
-// Global variables
-let currentUser = null;
-let auth = null;
-let db = null;
+// js/auth.js
 
 // Shared Firebase wait function with better error handling
 function waitForFirebase() {
     return new Promise((resolve, reject) => {
         let attempts = 0;
-        const maxAttempts = 50; // 5 seconds total
-        
+        const maxAttempts = 50;
+
         const checkFirebase = () => {
             attempts++;
-            
-            if (typeof firebase !== 'undefined' && 
-                typeof auth !== 'undefined' && auth !== null && 
-                typeof db !== 'undefined' && db !== null) {
+            if (typeof firebase !== 'undefined' && auth && db) {
                 console.log('Firebase is ready after', attempts, 'attempts');
                 resolve();
             } else if (attempts >= maxAttempts) {
@@ -23,7 +17,7 @@ function waitForFirebase() {
                 setTimeout(checkFirebase, 100);
             }
         };
-        
+
         checkFirebase();
     });
 }
@@ -34,31 +28,16 @@ async function initializeApp() {
         console.log('Waiting for Firebase...');
         await waitForFirebase();
         console.log('Firebase is ready, initializing application...');
-        
-        // Hide loading message and show main content
-        const loadingMessage = document.getElementById('loadingMessage');
-        const balanceSection = document.querySelector('.balance-section');
-        const transactionSection = document.querySelector('.transaction-section');
-        
-        if (loadingMessage) {
-            loadingMessage.style.display = 'none';
-        }
-        if (balanceSection) {
-            balanceSection.style.display = 'block';
-        }
-        if (transactionSection) {
-            transactionSection.style.display = 'block';
-        }
-        
-        // Set up auth state observer and other initialization
+
+        // Just set up auth and event listeners — don't unhide dashboard yet
         setupAuthObserver();
         setupEventListeners();
-        
+
     } catch (error) {
         console.error('Failed to initialize application:', error);
         showMessage('Failed to connect to database: ' + error.message, 'error');
-        
-        // Show a retry button
+
+        // Show retry button
         const loadingMessage = document.getElementById('loadingMessage');
         if (loadingMessage) {
             loadingMessage.innerHTML = `
@@ -71,87 +50,80 @@ async function initializeApp() {
     }
 }
 
+
 function setupAuthObserver() {
     auth.onAuthStateChanged((user) => {
+        const loadingMessage = document.getElementById('loadingMessage');
+        const balanceSection = document.querySelector('.balance-section');
+        const transactionSection = document.querySelector('.transaction-section');
+
+        console.log('Auth state changed:', user ? `User: ${user.email}` : 'No user');
+
         if (user) {
             currentUser = user;
             console.log('User logged in:', user.email);
-            
-            // Notify transactions module about user authentication
+
+            // Hide loading and show dashboard
+            if (loadingMessage) loadingMessage.style.display = 'none';
+            if (balanceSection) balanceSection.style.display = 'block';
+            if (transactionSection) transactionSection.style.display = 'block';
+
             if (typeof onUserAuthenticated === 'function') {
                 onUserAuthenticated(user);
             }
-            
-            // Redirect to dashboard if on auth pages
-            if (window.location.pathname.includes('login.html') || 
-                window.location.pathname === '/' || 
-                window.location.pathname.endsWith('index.html')) {
+
+            // Redirect if on login/signup
+            if (['/', '/index.html', '/login.html'].includes(window.location.pathname)) {
                 window.location.href = 'dashboard.html';
             }
             updateUI();
         } else {
             currentUser = null;
-            console.log('User logged out');
-            
-            // Notify transactions module about user logout
+            console.log('User logged out - clearing data');
+            clearLocalData();
+
             if (typeof onUserAuthenticated === 'function') {
                 onUserAuthenticated(null);
             }
-            
-            // FIXED: Redirect to login page (not home page) to allow different login
-            if (window.location.pathname.includes('dashboard.html')) {
-                window.location.href = 'login.html'; // Go to login page for new login
+
+            // Hide dashboard and show login redirect
+            if (balanceSection) balanceSection.style.display = 'none';
+            if (transactionSection) transactionSection.style.display = 'none';
+            if (loadingMessage) loadingMessage.style.display = 'block';
+
+            if (!['/login.html', '/signup.html'].some(p => window.location.pathname.includes(p))) {
+                setTimeout(() => window.location.href = 'login.html', 1000);
             }
             updateUI();
         }
     });
 }
 
+
 function setupEventListeners() {
-    // DOM Elements
     const loginForm = document.getElementById('loginForm');
     const signupForm = document.getElementById('signupForm');
     const logoutBtn = document.getElementById('logoutBtn');
-    const authMessage = document.getElementById('authMessage');
     const loginTab = document.getElementById('loginTab');
     const signupTab = document.getElementById('signupTab');
-    const showLogin = document.getElementById('showLogin');
-    const showSignup = document.getElementById('showSignup');
 
     // Check URL parameters for signup
     if (window.location.search.includes('action=signup')) {
         showSignupForm();
     }
 
-    // Event Listeners
-    if (loginForm) {
-        loginForm.addEventListener('submit', handleLogin);
-    }
-    if (signupForm) {
-        signupForm.addEventListener('submit', handleSignup);
-    }
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', handleLogout);
-    }
-    if (loginTab) {
-        loginTab.addEventListener('click', showLoginForm);
-    }
-    if (signupTab) {
-        signupTab.addEventListener('click', showSignupForm);
-    }
-    if (showLogin) {
-        showLogin.addEventListener('click', showLoginForm);
-    }
-    if (showSignup) {
-        showSignup.addEventListener('click', showSignupForm);
-    }
+    if (loginForm) loginForm.addEventListener('submit', handleLogin);
+    if (signupForm) signupForm.addEventListener('submit', handleSignup);
+    if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+    if (loginTab) loginTab.addEventListener('click', showLoginForm);
+    if (signupTab) signupTab.addEventListener('click', showSignupForm);
 }
 
 // Functions
 async function handleLogin(e) {
     if (e) e.preventDefault();
     
-    if (!auth) {
+    if (typeof auth === 'undefined' || auth === null) {
         showMessage('Authentication service is not available. Please refresh the page.', 'error');
         return;
     }
@@ -160,7 +132,6 @@ async function handleLogin(e) {
     const password = document.getElementById('loginPassword').value;
     
     try {
-        showMessage('Signing in...', 'info');
         const userCredential = await auth.signInWithEmailAndPassword(email, password);
         console.log('Login successful:', userCredential.user.email);
         
@@ -170,14 +141,14 @@ async function handleLogin(e) {
         showMessage('Login successful!', 'success');
     } catch (error) {
         console.error('Login error:', error);
-        showMessage('Login error: ' + error.message, 'error');
+        showMessage('Login error: Invalid Credentials', 'error');
     }
 }
 
 async function handleSignup(e) {
     if (e) e.preventDefault();
     
-    if (!auth || !db) {
+    if (typeof auth === 'undefined' || auth === null) {
         showMessage('Authentication service is not available. Please refresh the page.', 'error');
         return;
     }
@@ -187,18 +158,23 @@ async function handleSignup(e) {
     const password = document.getElementById('signupPassword').value;
     
     try {
-        showMessage('Creating account...', 'info');
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
         console.log('Signup successful:', user.email);
         
         // Create user document in Firestore
-        await db.collection('users').doc(user.uid).set({
-            username: username,
-            email: email,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        console.log('User document created in Firestore');
+        if (typeof db !== 'undefined' && db !== null) {
+            await db.collection('users').doc(user.uid).set({
+                username: username,
+                email: email,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log('User document created in Firestore');
+        } else {
+            console.error('Firestore is not available');
+            showMessage('Database connection error. Please try again.', 'error');
+            return;
+        }
         
         if (document.getElementById('signupForm')) {
             document.getElementById('signupForm').reset();
@@ -211,56 +187,58 @@ async function handleSignup(e) {
 }
 
 async function handleLogout() {
-    console.log('Logout initiated...');
-    
+    console.log('Logout initiated');
+
     if (!auth) {
-        console.error('Auth not available for logout');
-        showMessage('Authentication service unavailable. Please refresh the page.', 'error');
+        console.error('Firebase auth not available for logout');
+        clearLocalData();
+        window.location.href = 'login.html';
         return;
     }
-    
+
     try {
-        // Show loading state
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.textContent = 'Logging out...';
-            logoutBtn.disabled = true;
-        }
-        
-        console.log('Calling auth.signOut()...');
+        // Hide dashboard immediately
+        const balanceSection = document.querySelector('.balance-section');
+        const transactionSection = document.querySelector('.transaction-section');
+        if (balanceSection) balanceSection.style.display = 'none';
+        if (transactionSection) transactionSection.style.display = 'none';
+
+        // Clear local data
+        clearLocalData();
+
+        // Actually sign out
         await auth.signOut();
-        console.log('Sign out successful');
-        
-        // Clear any local data
-        currentUser = null;
-        
-        // Show success message briefly before redirect
-        showMessage('Logged out successfully. Redirecting to login...', 'success');
-        
-        // Add a small delay to show the success message, then redirect to login page
+        console.log('✅ User signed out successfully');
+
+        showMessage('Logged out successfully', 'success');
+
+        // Redirect right away (don’t wait for observer)
         setTimeout(() => {
             window.location.href = 'login.html';
-        }, 1500);
-        
+        }, 500);
+
     } catch (error) {
-        console.error('Sign out error:', error);
-        showMessage('Logout error: ' + error.message, 'error');
-        
-        // Reset button state
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.textContent = 'Logout';
-            logoutBtn.disabled = false;
-        }
-        
-        // Force redirect to login page if auth fails completely
-        if (error.code === 'auth/network-request-failed') {
-            setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 1000);
-        }
+        console.error('❌ Sign out error:', error);
+        showMessage('Error logging out: ' + error.message, 'error');
     }
 }
+
+
+
+function clearLocalData() {
+    try {
+        localStorage.clear();
+        sessionStorage.clear();
+
+        currentUser = null;
+        userTransactions = [];
+
+        console.log('Local data cleared successfully');
+    } catch (error) {
+        console.error('Error clearing local data:', error);
+    }
+}
+
 
 function showLoginForm(e) {
     if (e) e.preventDefault();
@@ -291,98 +269,119 @@ function showSignupForm(e) {
 }
 
 function showMessage(message, type) {
-    // Try to use authMessage first, then create a temporary one
-    let messageElement = document.getElementById('authMessage');
+    console.log(`Message [${type}]:`, message);
     
-    if (!messageElement) {
-        // Create a temporary message element
-        messageElement = document.createElement('div');
-        messageElement.id = 'tempAuthMessage';
-        messageElement.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 8px;
-            color: white;
-            z-index: 10000;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            max-width: 300px;
-            transition: opacity 0.3s ease;
-        `;
-        
-        // Style based on type
-        if (type === 'error') {
-            messageElement.style.backgroundColor = '#e74c3c';
-        } else if (type === 'success') {
-            messageElement.style.backgroundColor = '#27ae60';
-        } else if (type === 'info') {
-            messageElement.style.backgroundColor = '#3498db';
-        } else {
-            messageElement.style.backgroundColor = '#34495e';
+    // Remove any existing temporary messages
+    const existingMessages = document.querySelectorAll('#tempAuthMessage, .firebase-error-message');
+    existingMessages.forEach(msg => {
+        if (msg.parentNode) {
+            msg.parentNode.removeChild(msg);
         }
-        
-        document.body.appendChild(messageElement);
+    });
+    
+    // Create message element
+    const messageElement = document.createElement('div');
+    messageElement.id = 'tempAuthMessage';
+    
+    // Set styles
+    const styles = {
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        padding: '15px 20px',
+        borderRadius: '8px',
+        color: 'white',
+        zIndex: '10000',
+        fontWeight: '600',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        maxWidth: '300px',
+        fontSize: '14px',
+        lineHeight: '1.4',
+        border: '1px solid rgba(255,255,255,0.2)'
+    };
+    
+    Object.assign(messageElement.style, styles);
+    
+    // Set background color based on type
+    switch(type) {
+        case 'success':
+            messageElement.style.backgroundColor = 'var(--success)';
+            break;
+        case 'error':
+            messageElement.style.backgroundColor = 'var(--danger)';
+            break;
+        case 'warning':
+            messageElement.style.backgroundColor = 'var(--warning)';
+            break;
+        default:
+            messageElement.style.backgroundColor = 'var(--primary)';
     }
     
     messageElement.textContent = message;
-    messageElement.style.display = 'block';
-    messageElement.style.opacity = '1';
+    document.body.appendChild(messageElement);
     
-    setTimeout(() => hideMessage(), 5000);
+    // Add close button
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '&times;';
+    closeBtn.style.cssText = `
+        background: none;
+        border: none;
+        color: white;
+        font-size: 18px;
+        cursor: pointer;
+        margin-left: 10px;
+        float: right;
+        line-height: 1;
+    `;
+    closeBtn.onclick = () => {
+        if (messageElement.parentNode) {
+            messageElement.parentNode.removeChild(messageElement);
+        }
+    };
+    messageElement.appendChild(closeBtn);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (messageElement.parentNode) {
+            messageElement.parentNode.removeChild(messageElement);
+        }
+    }, 5000);
 }
 
 function hideMessage() {
-    const authMessage = document.getElementById('authMessage');
     const tempAuthMessage = document.getElementById('tempAuthMessage');
     
-    if (authMessage) {
-        authMessage.style.display = 'none';
-    }
-    if (tempAuthMessage) {
-        tempAuthMessage.style.opacity = '0';
-        setTimeout(() => {
-            if (tempAuthMessage.parentNode) {
-                tempAuthMessage.parentNode.removeChild(tempAuthMessage);
-            }
-        }, 300);
+    if (tempAuthMessage && tempAuthMessage.parentNode) {
+        tempAuthMessage.parentNode.removeChild(tempAuthMessage);
     }
 }
 
 function updateUI() {
     const userInfo = document.getElementById('userInfo');
     const usernameDisplay = document.getElementById('usernameDisplay');
-    const logoutBtn = document.getElementById('logoutBtn');
-    
-    if (currentUser && userInfo && usernameDisplay && db) {
-        // Load user profile data
+
+    if (currentUser && userInfo && usernameDisplay && typeof db !== 'undefined' && db !== null) {
         db.collection('users').doc(currentUser.uid).get()
             .then(doc => {
                 if (doc.exists) {
                     const userData = doc.data();
-                    usernameDisplay.textContent = userData.username;
+                    usernameDisplay.textContent = userData.username || currentUser.email;
+                } else {
+                    usernameDisplay.textContent = currentUser.email;
                 }
             })
             .catch(error => {
                 console.error('Error loading user data:', error);
                 usernameDisplay.textContent = currentUser.email;
             });
-            
+
         userInfo.style.display = 'flex';
-        
-        // Reset logout button state
-        if (logoutBtn) {
-            logoutBtn.textContent = 'Logout';
-            logoutBtn.disabled = false;
-        }
     } else if (userInfo) {
         userInfo.style.display = 'none';
+        if (usernameDisplay) usernameDisplay.textContent = 'User';
     }
 }
 
+
 // Start the application when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, starting app initialization...');
-    initializeApp();
-});
+document.addEventListener('DOMContentLoaded', initializeApp);
