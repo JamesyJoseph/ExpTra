@@ -97,7 +97,7 @@ function setupAuthObserver() {
             
             // Redirect to login if on dashboard
             if (window.location.pathname.includes('dashboard.html')) {
-                window.location.href = 'login.html';
+                window.location.href = 'index.html';
             }
             updateUI();
         }
