@@ -1,5 +1,5 @@
 // js/auth.js
-
+let skipRedirect = false;
 // Shared Firebase wait function with better error handling
 function waitForFirebase() {
     return new Promise((resolve, reject) => {
@@ -29,6 +29,12 @@ async function initializeApp() {
         await waitForFirebase();
         console.log('Firebase is ready, initializing application...');
 
+        if (window.location.pathname.includes('login.html') || window.location.pathname.includes('signup.html')) {
+            currentUser = null;
+            clearLocalData();
+            skipRedirect = true;
+        }
+        
         // Just set up auth and event listeners — don't unhide dashboard yet
         setupAuthObserver();
         setupEventListeners();
@@ -73,7 +79,7 @@ function setupAuthObserver() {
             }
 
             // Redirect if on login/signup
-            if (['/', '/index.html', '/login.html'].includes(window.location.pathname)) {
+            if (!skipRedirect && ['/', '/index.html', '/login.html'].includes(window.location.pathname)) {
                 window.location.href = 'dashboard.html';
             }
             updateUI();
@@ -132,6 +138,9 @@ async function handleLogin(e) {
     const password = document.getElementById('loginPassword').value;
     
     try {
+        // Ensure fresh session
+        await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+        
         const userCredential = await auth.signInWithEmailAndPassword(email, password);
         console.log('Login successful:', userCredential.user.email);
         
@@ -139,6 +148,7 @@ async function handleLogin(e) {
             document.getElementById('loginForm').reset();
         }
         showMessage('Login successful!', 'success');
+        skipRedirect = false;
     } catch (error) {
         console.error('Login error:', error);
         showMessage('Login error: Invalid Credentials', 'error');
@@ -158,6 +168,9 @@ async function handleSignup(e) {
     const password = document.getElementById('signupPassword').value;
     
     try {
+        // Ensure fresh session
+        await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+        
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
         console.log('Signup successful:', user.email);
@@ -180,6 +193,7 @@ async function handleSignup(e) {
             document.getElementById('signupForm').reset();
         }
         showMessage('Account created successfully!', 'success');
+        skipRedirect = false;
     } catch (error) {
         console.error('Signup error:', error);
         showMessage('Signup error: ' + error.message, 'error');
@@ -208,7 +222,7 @@ async function handleLogout() {
 
         // Actually sign out
         await auth.signOut();
-        console.log('✅ User signed out successfully');
+        console.log('User signed out successfully');
 
         showMessage('Logged out successfully', 'success');
 
@@ -218,7 +232,7 @@ async function handleLogout() {
         }, 500);
 
     } catch (error) {
-        console.error('❌ Sign out error:', error);
+        console.error('Sign out error:', error);
         showMessage('Error logging out: ' + error.message, 'error');
     }
 }
