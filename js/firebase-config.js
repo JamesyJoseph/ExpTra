@@ -126,8 +126,8 @@ async function initializeFirebase() {
         
         // Enable offline persistence
         try {
-            await db.enablePersistence({ synchronizeTabs: true });
-            console.log('Firestore persistence enabled');
+            await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+            console.log("Auth persistence set to SESSION (clears when tab closes)");
         } catch (err) {
             console.warn('Firestore persistence failed:', err.code);
             if (err.code === 'failed-precondition') {
