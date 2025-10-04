@@ -156,6 +156,7 @@ async function handleLogin(e) {
         }
         showMessage('Login successful!', 'success');
         skipRedirect = false;
+        window.location.href = 'dashboard.html';
     } catch (error) {
         console.error('Login error:', error);
         showMessage('Login error: Invalid Credentials', 'error');
@@ -201,6 +202,7 @@ async function handleSignup(e) {
         }
         showMessage('Account created successfully!', 'success');
         skipRedirect = false;
+        window.location.href = 'dashboard.html';
     } catch (error) {
         console.error('Signup error:', error);
         showMessage('Signup error: ' + error.message, 'error');
