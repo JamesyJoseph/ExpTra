@@ -341,6 +341,24 @@ main {
     text-decoration: none;
 }
 
+.message {
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 15px;
+    text-align: center;
+}
+
+.message.success {
+    background-color: rgba(56, 176, 0, 0.2);
+    color: var(--success);
+    border: 1px solid var(--success);
+}
+
+.message.error {
+    background-color: rgba(230, 57, 70, 0.2);
+    color: var(--danger);
+    border: 1px solid var(--danger);
+}
 
 /* Dashboard Styles */
 .balance-section {
@@ -620,37 +638,8 @@ textarea {
     color: var(--danger);
 }
 
-/* Message Styles - Consolidated and Fixed */
+/* Message styles for notifications */
 .message {
-    padding: 12px 16px;
-    border-radius: 8px;
-    margin: 15px 0;
-    text-align: center;
-    font-weight: 500;
-    border: 1px solid;
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.message.success {
-    background-color: rgba(56, 176, 0, 0.15);
-    color: var(--success);
-    border-color: var(--success);
-}
-
-.message.error {
-    background-color: rgba(230, 57, 70, 0.15);
-    color: var(--danger);
-    border-color: var(--danger);
-}
-
-.message.warning {
-    background-color: rgba(255, 170, 0, 0.15);
-    color: var(--warning);
-    border-color: var(--warning);
-}
-
-/* Toast messages for temporary notifications */
-.message.toast {
     position: fixed;
     top: 20px;
     right: 20px;
@@ -661,51 +650,18 @@ textarea {
     font-weight: 600;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     max-width: 300px;
-    margin: 0;
-    border: none;
 }
 
-.message.toast.success {
+.message.success {
     background-color: var(--success);
-    border-left: 4px solid var(--success);
 }
 
-.message.toast.error {
+.message.error {
     background-color: var(--danger);
-    border-left: 4px solid var(--danger);
 }
 
-.message.toast.warning {
+.message.warning {
     background-color: var(--warning);
-    border-left: 4px solid var(--warning);
-    color: var(--dark);
-}
-
-.message.hidden {
-    display: none;
-    opacity: 0;
-    visibility: hidden;
-}
-
-/* Auth message specific styling */
-#authMessage {
-    margin: 15px 0;
-    padding: 12px 16px;
-    border-radius: 6px;
-    text-align: center;
-    font-weight: 500;
-}
-
-#authMessage.success {
-    background-color: rgba(39, 174, 96, 0.1);
-    color: var(--success);
-    border: 1px solid var(--success);
-}
-
-#authMessage.error {
-    background-color: rgba(231, 76, 60, 0.1);
-    color: var(--danger);
-    border: 1px solid var(--danger);
 }
 
 /* Footer Styles */
