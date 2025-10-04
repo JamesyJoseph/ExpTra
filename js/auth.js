@@ -1,5 +1,8 @@
 // js/auth.js
 
+// Global variables
+let currentUser = null;
+
 // Shared Firebase wait function
 function waitForFirebase() {
     return new Promise((resolve, reject) => {
@@ -59,13 +62,15 @@ function setupAuthObserver() {
                 onUserAuthenticated(user);
             }
             
+            // Update UI for logged-in user
+            updateUI();
+            
             // Redirect to dashboard if on auth pages
             if (window.location.pathname.includes('login.html') || 
                 window.location.pathname === '/' || 
                 window.location.pathname.endsWith('index.html')) {
                 window.location.href = 'dashboard.html';
             }
-            updateUI();
         } else {
             currentUser = null;
             console.log('User logged out');
@@ -75,11 +80,13 @@ function setupAuthObserver() {
                 onUserAuthenticated(null);
             }
             
+            // Update UI for logged-out user
+            updateUI();
+            
             // Redirect to login if on dashboard
             if (window.location.pathname.includes('dashboard.html')) {
                 window.location.href = 'login.html';
             }
-            updateUI();
         }
     });
 }
@@ -191,19 +198,19 @@ async function handleSignup(e) {
     }
 }
 
-function handleLogout() {
-    if (typeof auth !== 'undefined' && auth !== null) {
-        auth.signOut()
-            .then(() => {
-                console.log('User signed out successfully');
-            })
-            .catch((error) => {
-                console.error('Sign out error:', error);
-                showMessage('Logout error: ' + error.message, 'error');
-            });
-    } else {
-        console.error('Firebase auth is not available for logout');
-        showMessage('Authentication service unavailable', 'error');
+async function handleLogout() {
+    try {
+        if (typeof auth !== 'undefined' && auth !== null) {
+            await auth.signOut();
+            console.log('User signed out successfully');
+            // The auth state observer will handle the redirect
+        } else {
+            console.error('Firebase auth is not available for logout');
+            showMessage('Authentication service unavailable', 'error');
+        }
+    } catch (error) {
+        console.error('Sign out error:', error);
+        showMessage('Logout error: ' + error.message, 'error');
     }
 }
 
@@ -254,13 +261,51 @@ function showMessage(message, type) {
             font-weight: 600;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             max-width: 300px;
+            transition: all 0.3s ease;
         `;
+        
+        // Add CSS classes for different message types
+        if (type === 'error') {
+            messageElement.style.backgroundColor = '#e74c3c';
+            messageElement.style.borderLeft = '4px solid #c0392b';
+        } else if (type === 'success') {
+            messageElement.style.backgroundColor = '#27ae60';
+            messageElement.style.borderLeft = '4px solid #229954';
+        } else {
+            messageElement.style.backgroundColor = '#3498db';
+            messageElement.style.borderLeft = '4px solid #2980b9';
+        }
+        
         document.body.appendChild(messageElement);
+    } else {
+        // Style the existing message element
+        messageElement.style.position = 'fixed';
+        messageElement.style.top = '20px';
+        messageElement.style.right = '20px';
+        messageElement.style.padding = '15px 20px';
+        messageElement.style.borderRadius = '8px';
+        messageElement.style.color = 'white';
+        messageElement.style.zIndex = '10000';
+        messageElement.style.fontWeight = '600';
+        messageElement.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+        messageElement.style.maxWidth = '300px';
+        messageElement.style.transition = 'all 0.3s ease';
+        
+        if (type === 'error') {
+            messageElement.style.backgroundColor = '#e74c3c';
+            messageElement.style.borderLeft = '4px solid #c0392b';
+        } else if (type === 'success') {
+            messageElement.style.backgroundColor = '#27ae60';
+            messageElement.style.borderLeft = '4px solid #229954';
+        } else {
+            messageElement.style.backgroundColor = '#3498db';
+            messageElement.style.borderLeft = '4px solid #2980b9';
+        }
     }
     
     messageElement.textContent = message;
-    messageElement.className = `message ${type}`;
-    messageElement.classList.remove('hidden');
+    messageElement.style.display = 'block';
+    messageElement.style.opacity = '1';
     
     setTimeout(() => hideMessage(), 5000);
 }
@@ -270,17 +315,24 @@ function hideMessage() {
     const tempAuthMessage = document.getElementById('tempAuthMessage');
     
     if (authMessage) {
-        authMessage.classList.add('hidden');
+        authMessage.style.opacity = '0';
+        setTimeout(() => {
+            authMessage.style.display = 'none';
+        }, 300);
     }
-    if (tempAuthMessage && tempAuthMessage.parentNode) {
-        tempAuthMessage.parentNode.removeChild(tempAuthMessage);
+    if (tempAuthMessage) {
+        tempAuthMessage.style.opacity = '0';
+        setTimeout(() => {
+            if (tempAuthMessage.parentNode) {
+                tempAuthMessage.parentNode.removeChild(tempAuthMessage);
+            }
+        }, 300);
     }
 }
 
 function updateUI() {
     const userInfo = document.getElementById('userInfo');
     const usernameDisplay = document.getElementById('usernameDisplay');
-    const mainContent = document.getElementById('mainContent');
     
     if (currentUser && userInfo && usernameDisplay && typeof db !== 'undefined' && db !== null) {
         // Load user profile data
